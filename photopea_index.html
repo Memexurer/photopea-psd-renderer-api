@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <script>
+      var n = 0,
+        wnd;
+      function iframeLoaded(pp) {
+        wnd = pp.contentWindow;
+        window.addEventListener("message", ppReady);
+      }
+
+      var config = CONFIG;
+      var job = config["job"];
+
+      function ppReady(e) {
+        console.log(e);
+
+        if (e.data == "done") {
+          n++;
+
+          if (n == 1) {
+            fetch(`/job/${job}/template.psd`)
+              .then((response) => response.arrayBuffer())
+              .then((arrayBuffer) => {
+                wnd.postMessage(arrayBuffer, "*");
+              })
+              .catch((error) => {
+                console.error("Error fetching the file:", error);
+              });
+          } else if (n == 2) {
+            wnd.postMessage(SCRIPT, "*");
+          } else if (n == 3) {
+            wnd.postMessage('activeDocument.saveToOE("png")', "*");
+          }
+        } else if (typeof e.data != "string") {
+          console.log("sending sum with body " + e.data);
+          fetch(`/job/${job}/result`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/octet-stream",
+            },
+            body: e.data,
+          })
+            .then((result) => {
+              console.log("Success:", result);
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+            });
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <iframe
+      id="photopea"
+      src="https://www.photopea.com"
+      onload="iframeLoaded(this)"
+    ></iframe>
+  </body>
+</html>
